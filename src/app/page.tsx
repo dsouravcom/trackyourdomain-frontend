@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -11,11 +10,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { useAuthApi } from "@/lib/api";
+import { CheckCircle, Plus, XCircle } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import type { Domain } from "./types";
 
 export default function Home() {
+  const api = useAuthApi();
+
   const [domains, setDomains] = useState<Domain[]>([
     {
       id: "1",
@@ -82,6 +85,12 @@ export default function Home() {
     }
   };
 
+  const testing = async () => {
+    console.log("Testing...");
+    console.log(api.getUri({ url: "/domain/protected" }));
+    await api.get("/domain/user");
+  };
+
   return (
     <main className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -107,6 +116,8 @@ export default function Home() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <button onClick={testing}>Testing...</button>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {domains.map((domain) => (

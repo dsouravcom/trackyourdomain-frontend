@@ -1,6 +1,7 @@
 "use client";
 
 import type { Domain } from "@/app/types/index";
+import LastCheckedTime from "@/components/LastCheckedTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
   Globe,
   Lock,
   Monitor,
+  RotateCw,
   Server,
   Shield,
   XCircle,
@@ -27,7 +29,6 @@ import {
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import LastCheckedTime from "@/components/LastCheckedTime";
 
 export default function DomainInfoPage() {
   const api = useAuthApi();
@@ -38,25 +39,24 @@ export default function DomainInfoPage() {
   });
   const [domainInfo, setDomainInfo] = useState<Domain>();
   const [loading, setLoading] = useState(false);
-  const [timezone, setTimezone] = useState('');
+  const [timezone, setTimezone] = useState("");
+  const [isRotating, setIsRotating] = useState(false);
 
   const { id } = useParams();
 
+  const fetchDomainData = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/domain/${id}`);
+      setDomainInfo(res.data);
+    } catch (error) {
+      console.log(error);
+      alert("Error fetching domain data");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    console.log("testing");
-    const fetchDomainData = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`/domain/${id}`);
-        setDomainInfo(res.data);
-      } catch (error) {
-        console.log(error);
-        alert("Error fetching domain data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDomainData();
 
     // Get the current timezone
@@ -78,6 +78,43 @@ export default function DomainInfoPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleRefresh = async () => {
+    setIsRotating(true);
+    try {
+      // Simulate API call
+      await api.post(`/domain/refresh/${id}`);
+    } catch (error) {
+      console.error("API call failed:", error);
+    } finally {
+      setIsRotating(false);
+      fetchDomainData();
+    }
+  };
+  const handleWhoisRefresh = async () => {
+    setIsRotating(true);
+    try {
+      // Simulate API call
+      await api.post(`/domain/refresh-whois/${id}`);
+    } catch (error) {
+      console.error("API call failed:", error);
+    } finally {
+      setIsRotating(false);
+      fetchDomainData();
+    }
+  };
+  const handleSSLRefresh = async () => {
+    setIsRotating(true);
+    try {
+      // Simulate API call
+      await api.post(`/domain/refresh-ssl/${id}`);
+    } catch (error) {
+      console.error("API call failed:", error);
+    } finally {
+      setIsRotating(false);
+      fetchDomainData();
+    }
+  };
+
   const handleIframeLoad = () => {
     setPreviewState({
       loading: false,
@@ -94,29 +131,29 @@ export default function DomainInfoPage() {
 
   const formatDate = (dateInput: string | number) => {
     let date;
-    if (typeof dateInput === 'string' && !isNaN(Number(dateInput))) {
+    if (typeof dateInput === "string" && !isNaN(Number(dateInput))) {
       // If the input is a string that can be converted to a number, treat it as a Unix timestamp
       dateInput = Number(dateInput);
     }
-  
-    if (typeof dateInput === 'number') {
+
+    if (typeof dateInput === "number") {
       // If the input is a number, treat it as a Unix timestamp
       date = new Date(dateInput * 1000); // Convert seconds to milliseconds
     } else {
       // Otherwise, treat it as an ISO date string
       date = new Date(dateInput);
     }
-  
+
     // Check if the date is valid
     if (isNaN(date.getTime())) {
       console.error("Invalid date input:", dateInput);
       return "Invalid date";
     }
-  
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
+
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     }).format(date);
   };
 
@@ -159,43 +196,53 @@ export default function DomainInfoPage() {
                 height={64}
                 className="w-12 h-12"
               />
-              <div>
-                <h1 className="text-3xl font-bold">{domainInfo.url}</h1>
-                <p>{timezone}</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge
-                          variant={
-                            domainInfo.status ? "default" : "destructive"
-                          }
-                          className="text-sm"
-                        >
-                          <StatusIcon
-                            className={`w-4 h-4 mr-1 ${
-                              domainInfo.status
-                                ? "text-green-500"
-                                : "text-red-950"
-                            }`}
-                          />
-                          {statusText}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          {domainInfo.status
-                            ? "Website is up and running"
-                            : "Website is currently down"}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <span className="text-sm text-muted-foreground flex items-center">
-                    <LastCheckedTime dateString={domainInfo.last_checked} />
-                  </span>
+              <div className="flex justify-between w-full">
+                <div>
+                  <h1 className="text-3xl font-bold">{domainInfo.url}</h1>
+                  <p>{timezone}</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge
+                            variant={
+                              domainInfo.status ? "default" : "destructive"
+                            }
+                            className="text-sm"
+                          >
+                            <StatusIcon
+                              className={`w-4 h-4 mr-1 ${
+                                domainInfo.status
+                                  ? "text-green-500"
+                                  : "text-red-950"
+                              }`}
+                            />
+                            {statusText}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            {domainInfo.status
+                              ? "Website is up and running"
+                              : "Website is currently down"}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <span className="text-sm text-muted-foreground flex items-center">
+                      <LastCheckedTime dateString={domainInfo.last_checked} />
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div className="flex items-center justify-end space-x-4">
+              <button
+                onClick={handleRefresh}
+                className="bg-red-500 rounded-lg p-2"
+              >
+                <RotateCw className={`size-4 ${isRotating ? "rotate" : ""}`} />
+              </button>
             </div>
           </header>
 
@@ -254,10 +301,22 @@ export default function DomainInfoPage() {
               <Separator />
 
               <section>
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <Globe className="w-5 h-5 mr-2" />
-                  WHOIS Information
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <Globe className="w-5 h-5 mr-2" />
+                    WHOIS Information
+                  </h2>
+                  <div className="flex items-center justify-end space-x-4">
+                    <button
+                      onClick={handleWhoisRefresh}
+                      className="bg-red-500 rounded-lg p-2"
+                    >
+                      <RotateCw
+                        className={`size-4 ${isRotating ? "rotate" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex items-center space-x-2">
                     <Building className="w-5 h-5 text-muted-foreground" />
@@ -305,10 +364,22 @@ export default function DomainInfoPage() {
               <Separator />
 
               <section>
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <Lock className="w-5 h-5 mr-2" />
-                  SSL Information
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <Lock className="w-5 h-5 mr-2" />
+                    SSL Information
+                  </h2>
+                  <div className="flex items-center justify-end space-x-4">
+                    <button
+                      onClick={handleSSLRefresh}
+                      className="bg-red-500 rounded-lg p-2"
+                    >
+                      <RotateCw
+                        className={`size-4 ${isRotating ? "rotate" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
                 {domainInfo.ssl_status ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex items-center space-x-2">
@@ -331,17 +402,18 @@ export default function DomainInfoPage() {
                   <p className="text-red-500">SSL certificate not found</p>
                 )}
                 {domainInfo.alternative_urls && (
-                <div className="mt-4">
-                  <span className="font-semibold flex items-center space-x-2 mb-2">
-                    <Globe className="w-5 h-5 text-muted-foreground" />
-                    <span>Subject Alternative Names:</span>
-                  </span>
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {domainInfo.alternative_urls.map((name, index) => (
-                      <li key={index}>{name}</li>
-                    ))}
-                  </ul>
-                </div>)}
+                  <div className="mt-4">
+                    <span className="font-semibold flex items-center space-x-2 mb-2">
+                      <Globe className="w-5 h-5 text-muted-foreground" />
+                      <span>Subject Alternative Names:</span>
+                    </span>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {domainInfo.alternative_urls.map((name, index) => (
+                        <li key={index}>{name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
             </CardContent>
           </Card>

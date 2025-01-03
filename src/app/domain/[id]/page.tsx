@@ -1,6 +1,7 @@
 "use client";
 
 import type { Domain } from "@/app/types/index";
+import { AnimatedCircularProgressBar } from "@/components/AnimatedCircularProgressBar";
 import LastCheckedTime from "@/components/LastCheckedTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuthApi } from "@/lib/api";
+import {
+  calculateElapsedDays,
+  calculateTotalDays,
+  formatDate,
+} from "@/lib/dateUtils";
 import {
   Building,
   Calendar,
@@ -39,7 +45,6 @@ export default function DomainInfoPage() {
   });
   const [domainInfo, setDomainInfo] = useState<Domain>();
   const [loading, setLoading] = useState(false);
-  const [timezone, setTimezone] = useState("");
   const [isRotating, setIsRotating] = useState(false);
 
   const { id } = useParams();
@@ -58,10 +63,6 @@ export default function DomainInfoPage() {
   };
   useEffect(() => {
     fetchDomainData();
-
-    // Get the current timezone
-    const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setTimezone(currentTimezone);
   }, []);
 
   useEffect(() => {
@@ -129,33 +130,21 @@ export default function DomainInfoPage() {
     });
   };
 
-  const formatDate = (dateInput: string | number) => {
-    let date;
-    if (typeof dateInput === "string" && !isNaN(Number(dateInput))) {
-      // If the input is a string that can be converted to a number, treat it as a Unix timestamp
-      dateInput = Number(dateInput);
-    }
+  const domainElapsedDays = domainInfo?.creation_date
+    ? calculateElapsedDays(domainInfo.creation_date)
+    : 0;
+  const domainTotalDays =
+    domainInfo?.creation_date && domainInfo?.expiration_date
+      ? calculateTotalDays(domainInfo.creation_date, domainInfo.expiration_date)
+      : 0;
 
-    if (typeof dateInput === "number") {
-      // If the input is a number, treat it as a Unix timestamp
-      date = new Date(dateInput * 1000); // Convert seconds to milliseconds
-    } else {
-      // Otherwise, treat it as an ISO date string
-      date = new Date(dateInput);
-    }
-
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      console.error("Invalid date input:", dateInput);
-      return "Invalid date";
-    }
-
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    }).format(date);
-  };
+  const sslElapsedDays = domainInfo?.ssl_valid_from
+    ? calculateElapsedDays(domainInfo.ssl_valid_from)
+    : 0;
+  const sslTotalDays =
+    domainInfo?.ssl_valid_from && domainInfo?.ssl_valid_till
+      ? calculateTotalDays(domainInfo.ssl_valid_from, domainInfo.ssl_valid_till)
+      : 0;
 
   const StatusIcon = domainInfo?.status ? CheckCircle : XCircle;
   const statusText = domainInfo?.status ? "Up" : "Down";
@@ -187,64 +176,105 @@ export default function DomainInfoPage() {
     <div className="container mx-auto p-4 space-y-8">
       {domainInfo ? (
         <div>
-          <header className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <Image
-                src={`https://www.google.com/s2/favicons?domain=https://${domainInfo.url}&sz=64`}
-                alt={`${domainInfo.url} favicon`}
-                width={64}
-                height={64}
-                className="w-12 h-12"
-              />
-              <div className="flex justify-between w-full">
-                <div>
-                  <h1 className="text-3xl font-bold">{domainInfo.url}</h1>
-                  <p>{timezone}</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Badge
-                            variant={
-                              domainInfo.status ? "default" : "destructive"
-                            }
-                            className="text-sm"
-                          >
-                            <StatusIcon
-                              className={`w-4 h-4 mr-1 ${
-                                domainInfo.status
-                                  ? "text-green-500"
-                                  : "text-red-950"
-                              }`}
-                            />
-                            {statusText}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {domainInfo.status
-                              ? "Website is up and running"
-                              : "Website is currently down"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <span className="text-sm text-muted-foreground flex items-center">
-                      <LastCheckedTime dateString={domainInfo.last_checked} />
-                    </span>
-                  </div>
+          <header className="p-4">
+            <div className="flex justify-between items-start gap-4">
+              {/* Favicon */}
+              <div className="flex-shrink-0">
+                <Image
+                  src={`https://www.google.com/s2/favicons?domain=https://${domainInfo.url}&sz=64`}
+                  alt={`${domainInfo.url} favicon`}
+                  width={64}
+                  height={64}
+                  className="w-12 h-12"
+                />
+              </div>
+
+              {/* Domain Info */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold truncate">
+                  {domainInfo.url}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge
+                          variant={
+                            domainInfo.status ? "default" : "destructive"
+                          }
+                          className="text-sm whitespace-nowrap"
+                        >
+                          <StatusIcon
+                            className={`w-4 h-4 mr-1 ${
+                              domainInfo.status
+                                ? "text-green-500"
+                                : "text-red-950"
+                            }`}
+                          />
+                          {statusText}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {domainInfo.status
+                            ? "Website is up and running"
+                            : "Website is currently down"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <LastCheckedTime dateString={domainInfo.last_checked} />
                 </div>
               </div>
-            </div>
-            <div className="flex items-center justify-end space-x-4">
-              <button
-                onClick={handleRefresh}
-                className="bg-red-500 rounded-lg p-2"
-              >
-                <RotateCw className={`size-4 ${isRotating ? "rotate" : ""}`} />
-              </button>
+
+              {/* Refresh Button */}
+              <div className="flex-shrink-0">
+                <button
+                  onClick={handleRefresh}
+                  className="bg-red-500 rounded-lg p-2 hover:bg-red-600 transition-colors"
+                  aria-label="Refresh status"
+                >
+                  <RotateCw
+                    className={`w-5 h-5 ${isRotating ? "rotate" : ""}`}
+                  />
+                </button>
+              </div>
             </div>
           </header>
+
+          <section>
+            <Card className="mt-4">
+              <CardContent className="pt-4 pb-16">
+                <div className="flex flex-col md:flex-row justify-around items-center gap-8 space-y-10 md:space-y-0">
+                  <div className="w-48 h-48">
+                    <AnimatedCircularProgressBar
+                      value={domainElapsedDays}
+                      maxValue={domainTotalDays}
+                      text={`${domainTotalDays - domainElapsedDays} days`}
+                      color="#3b82f6"
+                    />
+                    <p className="text-center mt-2">Domain Expiry</p>
+                    <p className="text-center text-sm text-muted-foreground">
+                      {formatDate(domainInfo.expiration_date)}
+                    </p>
+                  </div>
+                  {domainInfo?.status && (
+                  <div className="w-48 h-48">
+                    <AnimatedCircularProgressBar
+                      value={sslElapsedDays}
+                      maxValue={sslTotalDays}
+                      text={`${sslTotalDays - sslElapsedDays} days`}
+                      color="#10b981"
+                    />
+                    <p className="text-center mt-2">SSL Expiry</p>
+                    <p className="text-center text-sm text-muted-foreground">
+                      {formatDate(domainInfo.ssl_valid_till)}
+                    </p>
+                  </div>)}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
 
           <Card>
             <CardContent className="p-6 space-y-6">

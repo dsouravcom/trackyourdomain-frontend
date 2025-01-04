@@ -259,18 +259,19 @@ export default function DomainInfoPage() {
                     </p>
                   </div>
                   {domainInfo?.status && (
-                  <div className="w-48 h-48">
-                    <AnimatedCircularProgressBar
-                      value={sslElapsedDays}
-                      maxValue={sslTotalDays}
-                      text={`${sslTotalDays - sslElapsedDays} days`}
-                      color="#10b981"
-                    />
-                    <p className="text-center mt-2">SSL Expiry</p>
-                    <p className="text-center text-sm text-muted-foreground">
-                      {formatDate(domainInfo.ssl_valid_till)}
-                    </p>
-                  </div>)}
+                    <div className="w-48 h-48">
+                      <AnimatedCircularProgressBar
+                        value={sslElapsedDays}
+                        maxValue={sslTotalDays}
+                        text={`${sslTotalDays - sslElapsedDays} days`}
+                        color="#10b981"
+                      />
+                      <p className="text-center mt-2">SSL Expiry</p>
+                      <p className="text-center text-sm text-muted-foreground">
+                        {formatDate(domainInfo.ssl_valid_till)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -420,12 +421,12 @@ export default function DomainInfoPage() {
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
                       <span className="font-semibold">Valid From:</span>
-                      <span>{domainInfo.ssl_valid_from}</span>
+                      <span>{formatDate(domainInfo.ssl_valid_from)}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
                       <span className="font-semibold">Valid To:</span>
-                      <span>{domainInfo.ssl_valid_till}</span>
+                      <span>{formatDate(domainInfo.ssl_valid_till)}</span>
                     </div>
                   </div>
                 ) : (

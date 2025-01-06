@@ -1,5 +1,6 @@
 "use client";
 
+import Logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SignedIn, UserButton } from "@clerk/nextjs";
-import { CircuitBoard, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import Image from "next/image";
 import Link from "next/link";
 
 export function Navbar() {
@@ -19,8 +21,13 @@ export function Navbar() {
     <nav className="border-b">
       <div className="flex h-16 items-center px-4 container mx-auto">
         <Link href="/" className="flex items-center space-x-2">
-          <CircuitBoard className="h-6 w-6" />
-          <span className="font-bold">Track your domain</span>
+          <Image
+            src={Logo}
+            alt="Track Your Domain"
+            width={100}
+            height={100}
+            className="size-12"
+          />
         </Link>
 
         <div className="ml-auto flex items-center space-x-4">

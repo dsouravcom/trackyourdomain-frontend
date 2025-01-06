@@ -21,8 +21,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuthApi } from "@/lib/api";
-import { CheckCircle, Plus, Trash2, XCircle } from "lucide-react";
+import { CircleArrowDown, CircleArrowUp, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Domain } from "./types";
@@ -155,11 +161,24 @@ export default function Home() {
                 <CardContent className="flex items-center justify-between p-6">
                   <Link href={`/domain/${domain.id}`}>
                     <div className="flex items-center gap-4">
-                      {domain.status ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            {domain.status ? (
+                              <CircleArrowUp className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <CircleArrowDown className="h-5 w-5 text-red-500" />
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {domain.status
+                                ? "Website is up and running"
+                                : "Website is currently down"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{domain.url}</span>
                     </div>
                   </Link>

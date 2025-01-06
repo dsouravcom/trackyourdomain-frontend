@@ -22,7 +22,8 @@ import {
 import {
   Building,
   Calendar,
-  CheckCircle,
+  CircleArrowDown,
+  CircleArrowUp,
   ExternalLink,
   Globe,
   Lock,
@@ -30,7 +31,6 @@ import {
   RotateCw,
   Server,
   Shield,
-  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -46,6 +46,8 @@ export default function DomainInfoPage() {
   const [domainInfo, setDomainInfo] = useState<Domain>();
   const [loading, setLoading] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const [nsImageError, setNsImageError] = useState(false);
+  const [domainFaviconError, setDomainFaviconError] = useState(false);
 
   const { id } = useParams();
 
@@ -146,7 +148,7 @@ export default function DomainInfoPage() {
       ? calculateTotalDays(domainInfo.ssl_valid_from, domainInfo.ssl_valid_till)
       : 0;
 
-  const StatusIcon = domainInfo?.status ? CheckCircle : XCircle;
+  const StatusIcon = domainInfo?.status ? CircleArrowUp : CircleArrowDown;
   const statusText = domainInfo?.status ? "Up" : "Down";
 
   if (loading) {
@@ -181,11 +183,18 @@ export default function DomainInfoPage() {
               {/* Favicon */}
               <div className="flex-shrink-0">
                 <Image
-                  src={`https://www.google.com/s2/favicons?domain=https://${domainInfo.url}&sz=64`}
+                  src={
+                    domainFaviconError
+                      ? `https://www.google.com/s2/favicons?domain=https://${domainInfo.url}&sz=64`
+                      : `/globe.svg`
+                  }
                   alt={`${domainInfo.url} favicon`}
                   width={64}
                   height={64}
                   className="w-12 h-12"
+                  onError={() => {
+                    setDomainFaviconError(true);
+                  }}
                 />
               </div>
 
@@ -208,7 +217,7 @@ export default function DomainInfoPage() {
                             className={`w-4 h-4 mr-1 ${
                               domainInfo.status
                                 ? "text-green-500"
-                                : "text-red-950"
+                                : "text-white"
                             }`}
                           />
                           {statusText}
@@ -379,11 +388,18 @@ export default function DomainInfoPage() {
                     {domainInfo.name_servers.map((ns, index) => (
                       <li key={index} className="flex items-center space-x-2">
                         <Image
-                          src={`https://www.google.com/s2/favicons?domain=${ns}&sz=16`}
+                          src={
+                            nsImageError
+                              ? `https://www.google.com/s2/favicons?domain=${ns}&sz=16`
+                              : `/globe.svg`
+                          }
                           alt={`${ns} favicon`}
                           width={16}
                           height={16}
                           className="w-4 h-4"
+                          onError={() => {
+                            setNsImageError(true);
+                          }}
                         />
                         <span>{ns}</span>
                       </li>

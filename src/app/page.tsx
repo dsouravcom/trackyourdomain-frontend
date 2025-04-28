@@ -66,7 +66,7 @@ export default function Home() {
       setOpen(false);
     } catch (error) {
       console.log(error);
-      alert("Error adding domain");
+      alert("Sorry we couldn't add the domain");
     } finally {
       setLoading(false);
       setNewDomain("");

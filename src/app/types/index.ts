@@ -14,4 +14,16 @@ export interface Domain {
   ssl_valid_till: string;
   ssl_status: boolean;
   alternative_urls: string[];
+  createdAt: string;
+  email_issues: EmailIssue[];
+  dkim_selector: string | null;
+  email_deliverability_score: number;
+  email_deliverability_score_updated_at: string | null;
+}
+
+export interface EmailIssue {
+  issue: string;
+  severity: "High" | "Medium" | "Low";
+  description: string;
+  remediation: string;
 }

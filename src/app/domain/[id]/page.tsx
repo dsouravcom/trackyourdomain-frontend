@@ -1,8 +1,14 @@
 "use client";
 
-import type { Domain } from "@/app/types/index";
+import type { Domain, EmailIssue } from "@/app/types/index";
 import { AnimatedCircularProgressBar } from "@/components/AnimatedCircularProgressBar";
 import LastCheckedTime from "@/components/LastCheckedTime";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +26,7 @@ import {
   formatDate,
 } from "@/lib/dateUtils";
 import {
+  AlertCircle,
   Building,
   Calendar,
   CircleArrowDown,
@@ -27,6 +34,7 @@ import {
   ExternalLink,
   Globe,
   Lock,
+  Mail,
   Monitor,
   RotateCw,
   Server,
@@ -48,6 +56,7 @@ export default function DomainInfoPage() {
   const [isRotating, setIsRotating] = useState(false);
   const [nsImageError, setNsImageError] = useState(false);
   const [domainFaviconError, setDomainFaviconError] = useState(false);
+  const [dkimSelector, setDkimSelector] = useState<string>("");
 
   const { id } = useParams();
 
@@ -56,6 +65,7 @@ export default function DomainInfoPage() {
       setLoading(true);
       const res = await api.get(`/domain/${id}`);
       setDomainInfo(res.data);
+      setDkimSelector(res.data.dkim_selector || "");
     } catch (error) {
       console.log(error);
       alert("Error fetching domain data");
@@ -118,6 +128,40 @@ export default function DomainInfoPage() {
     }
   };
 
+  const handleEmailSecurityRefresh = async () => {
+    setIsRotating(true);
+    try {
+      // Simulate API call
+      await api.put(`/domain/refresh-email-security/${id}`);
+    } catch (error) {
+      console.error("API call failed:", error);
+    } finally {
+      setIsRotating(false);
+      fetchDomainData();
+    }
+  };
+
+  // Function to handle DKIM selector change
+  const handleChangeDkimSelector = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newSelector = event.target.value;
+    setDkimSelector(newSelector);
+  };
+
+  const handleDkimSelectorSubmit = async () => {
+    setIsRotating(true);
+    try {
+      // Simulate API call to update DKIM selector
+      await api.put(`/domain/update-dkim-selector/${id}`, { dkimSelector });
+    } catch (error) {
+      console.error("API call failed:", error);
+    } finally {
+      setIsRotating(false);
+      fetchDomainData();
+    }
+  };
+
   const handleIframeLoad = () => {
     setPreviewState({
       loading: false,
@@ -150,6 +194,22 @@ export default function DomainInfoPage() {
 
   const StatusIcon = domainInfo?.status ? CircleArrowUp : CircleArrowDown;
   const statusText = domainInfo?.status ? "Up" : "Down";
+
+  // Function to get color based on severity
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "Critical":
+        return "text-red-500"; // Highest priority
+      case "High":
+        return "text-orange-500";
+      case "Medium":
+        return "text-yellow-500";
+      case "Low":
+        return "text-green-500";
+      default:
+        return "text-gray-500";
+    }
+  };
 
   if (loading) {
     return (
@@ -232,7 +292,9 @@ export default function DomainInfoPage() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <LastCheckedTime dateString={domainInfo.last_checked} />
+                  <LastCheckedTime
+                    dateString={domainInfo.last_checked ?? domainInfo.createdAt}
+                  />
                 </div>
               </div>
 
@@ -460,6 +522,162 @@ export default function DomainInfoPage() {
                       ))}
                     </ul>
                   </div>
+                )}
+              </section>
+
+              <Separator />
+
+              {/* New Email Security Section */}
+              <section>
+                <div className="flex items-center justify-between">
+                  <div className="grid grid-cols-1 mb-4">
+                    <h2 className="text-xl font-semibold flex items-center">
+                      <Mail className="w-5 h-5 mr-2" />
+                      Email Security
+                    </h2>
+                    <LastCheckedTime
+                      dateString={
+                        domainInfo.email_deliverability_score_updated_at ??
+                        domainInfo.createdAt
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-end space-x-4">
+                    <button
+                      onClick={handleEmailSecurityRefresh}
+                      className="bg-red-500 rounded-lg p-2"
+                    >
+                      <RotateCw
+                        className={`size-4 ${isRotating ? "rotate" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {domainInfo.email_issues &&
+                domainInfo.email_issues.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-5 h-5 text-muted-foreground" />
+                        <span className="font-semibold">DKIM Selector:</span>
+                        <div className="flex items-center space-x-1">
+                          <input
+                            type="text"
+                            value={dkimSelector}
+                            placeholder="like 'default'"
+                            className="w-20 border rounded-md px-2 py-1 text-sm"
+                            onChange={handleChangeDkimSelector}
+                          />
+                          <button
+                            hidden={dkimSelector === domainInfo.dkim_selector || dkimSelector === ""}
+                            onClick={handleDkimSelectorSubmit}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              x="0px"
+                              y="0px"
+                              width="26"
+                              height="26"
+                              viewBox="0 0 48 48"
+                            >
+                              <path
+                                fill="#c8e6c9"
+                                d="M36,42H12c-3.314,0-6-2.686-6-6V12c0-3.314,2.686-6,6-6h24c3.314,0,6,2.686,6,6v24C42,39.314,39.314,42,36,42z"
+                              ></path>
+                              <path
+                                fill="#4caf50"
+                                d="M34.585 14.586L21.014 28.172 15.413 22.584 12.587 25.416 21.019 33.828 37.415 17.414z"
+                              ></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-5 h-5 text-muted-foreground" />
+                        <span className="font-semibold">
+                          Deliverability Score:
+                        </span>
+                        <span
+                          className={`${
+                            domainInfo.email_deliverability_score >= 80
+                              ? "text-green-500"
+                              : domainInfo.email_deliverability_score >= 60
+                              ? "text-amber-500"
+                              : "text-red-500"
+                          }`}
+                        >
+                          {domainInfo.email_deliverability_score}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <Accordion type="single" collapsible className="w-full">
+                      {domainInfo.email_issues.map(
+                        (issue: EmailIssue, index) => (
+                          <AccordionItem value={`item-${index}`} key={index}>
+                            <AccordionTrigger className="flex px-2 hover:no-underline">
+                              <div className="flex items-center">
+                                <span>{issue.issue}</span>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={`ml-2 ${getSeverityColor(
+                                  issue.severity
+                                )}`}
+                              >
+                                {issue.severity}
+                              </Badge>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="p-4 space-y-4">
+                                <div>
+                                  <h4 className="font-medium text-sm">
+                                    Issue Description:
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {issue.description}
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-sm flex items-center">
+                                    <AlertCircle className="w-4 h-4 mr-1" />
+                                    Recommended Solution:
+                                  </h4>
+                                  <div className="mt-1 p-3 bg-muted rounded-md text-sm">
+                                    {issue.remediation}
+                                  </div>
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        )
+                      )}
+                    </Accordion>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center space-x-2">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                      <span className="font-semibold">
+                        Deliverability Score:
+                      </span>
+                      <span
+                        className={`${
+                          domainInfo.email_deliverability_score >= 80
+                            ? "text-green-500"
+                            : domainInfo.email_deliverability_score >= 60
+                            ? "text-amber-500"
+                            : "text-red-500"
+                        }`}
+                      >
+                        {domainInfo.email_deliverability_score}%
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Congratulation🎉 No email security issues detected.
+                    </p>
+                  </>
                 )}
               </section>
             </CardContent>
